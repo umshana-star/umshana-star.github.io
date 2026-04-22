@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financial & BI Analysis — Affiliate Revenue & Reconciliation | Kwanda Zama</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1117;
+  --surface:#161b27;
+  --card:#1c2333;
+  --card2:#1e2a3a;
+  --border:#253048;
+  --gold:#f2c811;
+  --gold-dim:rgba(242,200,17,0.12);
+  --blue:#4a9eff;
+  --blue-dim:rgba(74,158,255,0.12);
+  --green:#3ecf8e;
+  --red:#ff4d6d;
+  --orange:#ff8c42;
+  --purple:#9b72cf;
+  --text:#e8eaf0;
+  --muted:#7b8db0;
+  --dim:#3d4f6b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);font-size:13px;overflow:hidden}
+
+/* ── LAYOUT ── */
+.app{display:grid;grid-template-rows:48px 1fr;grid-template-columns:200px 1fr;height:100vh}
+
+/* ── TOPBAR ── */
+.topbar{grid-column:1/-1;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 1.2rem;gap:1.2rem;z-index:10}
+.topbar-logo{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:0.85rem;letter-spacing:0.04em}
+.topbar-logo .dot{width:8px;height:8px;background:var(--gold);border-radius:50%}
+.topbar-title{flex:1;font-size:0.78rem;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase}
+.topbar-meta{display:flex;gap:0.6rem;align-items:center;font-size:0.72rem;color:var(--muted)}
+.tag{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(242,200,17,0.2);
+  padding:0.2rem 0.6rem;border-radius:2px;font-size:0.68rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase}
+
+/* ── SIDEBAR ── */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1rem 0;overflow:hidden}
+.sidebar-section{font-size:0.65rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--dim);padding:0.6rem 1rem;margin-top:0.5rem}
+.nav-item{display:flex;align-items:center;gap:0.7rem;padding:0.55rem 1rem;cursor:pointer;
+  color:var(--muted);font-size:0.78rem;font-weight:500;border-left:2px solid transparent;
+  transition:all 0.15s;user-select:none}
+.nav-item:hover{background:rgba(255,255,255,0.03);color:var(--text)}
+.nav-item.active{background:var(--gold-dim);color:var(--gold);border-left-color:var(--gold)}
+.nav-icon{width:16px;text-align:center;font-size:0.75rem}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:0.6rem;font-weight:700;
+  padding:0.1rem 0.35rem;border-radius:10px}
+
+.sidebar-filters{padding:1rem;border-top:1px solid var(--border);margin-top:auto}
+.filter-label{font-size:0.65rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:0.4rem}
+.filter-select{width:100%;background:var(--card);border:1px solid var(--border);color:var(--text);
+  padding:0.4rem 0.5rem;border-radius:2px;font-family:inherit;font-size:0.75rem;outline:none;
+  cursor:pointer;margin-bottom:0.6rem}
+.filter-select:focus{border-color:var(--gold)}
+
+/* ── MAIN ── */
+.main{overflow-y:auto;background:var(--bg);position:relative}
+.page{display:none;padding:1.2rem;min-height:100%}
+.page.active{display:block;animation:fadeIn 0.2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.page-header{margin-bottom:1rem}
+.page-header h1{font-size:1.1rem;font-weight:700;color:var(--text);margin-bottom:0.2rem}
+.page-header p{font-size:0.78rem;color:var(--muted)}
+
+/* ── KPI CARDS ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:0.7rem;margin-bottom:1rem}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:3px;
+  padding:0.9rem 1rem;position:relative;overflow:hidden;cursor:default}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi-card.gold::before{background:var(--gold)}
+.kpi-card.blue::before{background:var(--blue)}
+.kpi-card.green::before{background:var(--green)}
+.kpi-card.red::before{background:var(--red)}
+.kpi-card.purple::before{background:var(--purple)}
+.kpi-label{font-size:0.67rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem}
+.kpi-value{font-family:'IBM Plex Mono',monospace;font-size:1.3rem;font-weight:600;color:var(--text);line-height:1}
+.kpi-value.large{font-size:1.05rem}
+.kpi-delta{font-size:0.68rem;margin-top:0.35rem;display:flex;align-items:center;gap:0.3rem}
+.kpi-delta.up{color:var(--green)}
+.kpi-delta.down{color:var(--red)}
+.kpi-delta.warn{color:var(--orange)}
+
+/* ── CHART GRID ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;margin-bottom:0.7rem}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.7rem;margin-bottom:0.7rem}
+.grid-7-3{display:grid;grid-template-columns:7fr 3fr;gap:0.7rem;margin-bottom:0.7rem}
+.grid-6-4{display:grid;grid-template-columns:6fr 4fr;gap:0.7rem;margin-bottom:0.7rem}
+.full{margin-bottom:0.7rem}
+
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:3px;padding:0.9rem}
+.chart-title{font-size:0.72rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:0.7rem;display:flex;align-items:center;gap:0.5rem}
+.chart-title .indicator{width:8px;height:8px;border-radius:1px}
+.chart-title .indicator.gold{background:var(--gold)}
+.chart-title .indicator.blue{background:var(--blue)}
+.chart-title .indicator.green{background:var(--green)}
+.chart-title .indicator.red{background:var(--red)}
+.chart-title .indicator.purple{background:var(--purple)}
+.chart-wrap{position:relative}
+
+/* ── TABLE ── */
+.data-table{width:100%;border-collapse:collapse;font-size:0.75rem}
+.data-table thead tr{border-bottom:1px solid var(--border)}
+.data-table th{font-size:0.65rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--dim);padding:0.4rem 0.6rem;text-align:left;white-space:nowrap}
+.data-table td{padding:0.45rem 0.6rem;border-bottom:1px solid rgba(255,255,255,0.03);
+  color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:0.72rem}
+.data-table tbody tr:hover{background:rgba(255,255,255,0.02)}
+.data-table .pos{color:var(--green)}
+.data-table .neg{color:var(--red)}
+.data-table .warn{color:var(--orange)}
+.badge{display:inline-block;padding:0.1rem 0.4rem;border-radius:2px;font-size:0.65rem;font-weight:600}
+.badge.high{background:rgba(255,77,109,0.15);color:var(--red)}
+.badge.med{background:rgba(255,140,66,0.15);color:var(--orange)}
+.badge.low{background:rgba(62,207,142,0.15);color:var(--green)}
+
+/* ── INSIGHT BOX ── */
+.insight-box{background:var(--gold-dim);border:1px solid rgba(242,200,17,0.25);border-radius:3px;
+  padding:0.7rem 0.9rem;margin-bottom:0.7rem;font-size:0.78rem;line-height:1.6}
+.insight-box strong{color:var(--gold)}
+.insight-box.blue{background:var(--blue-dim);border-color:rgba(74,158,255,0.25)}
+.insight-box.blue strong{color:var(--blue)}
+.insight-box.red{background:rgba(255,77,109,0.08);border-color:rgba(255,77,109,0.25)}
+.insight-box.red strong{color:var(--red)}
+
+/* ── ANOMALY INDICATOR ── */
+.anomaly-row{background:rgba(255,77,109,0.05)!important}
+.anomaly-row:hover{background:rgba(255,77,109,0.1)!important}
+
+/* ── FOOTER STATUS ── */
+.status-bar{grid-column:1/-1;background:var(--surface);border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:1.5rem;padding:0 1.2rem;height:26px;
+  font-size:0.68rem;color:var(--muted);position:fixed;bottom:0;left:0;right:0}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+/* scrollbar */
+.main::-webkit-scrollbar{width:4px}
+.main::-webkit-scrollbar-track{background:transparent}
+.main::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="dot"></div>
+      <span>Financial & BI Analysis</span>
+    </div>
+    <div class="topbar-title">Affiliate Revenue & Reconciliation Dashboard — K. Zama</div>
+    <div class="topbar-meta">
+      <span class="tag">Power BI Style</span>
+      <span>Dataset: 34,500 transactions · Sep 2023 – Sep 2025</span>
+      <span>|</span>
+      <span>🔄 Refreshed: <span id="refresh-time"></span></span>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">Report Pages</div>
+
+    <div class="nav-item active" onclick="showPage(0,this)">
+      <span class="nav-icon">📊</span> Executive Overview
+    </div>
+    <div class="nav-item" onclick="showPage(1,this)">
+      <span class="nav-icon">🤝</span> Affiliate Analysis
+    </div>
+    <div class="nav-item" onclick="showPage(2,this)">
+      <span class="nav-icon">⚖️</span> Reconciliation
+      <span class="nav-badge">!</span>
+    </div>
+    <div class="nav-item" onclick="showPage(3,this)">
+      <span class="nav-icon">🚨</span> Anomaly Detection
+      <span class="nav-badge">705</span>
+    </div>
+
+    <div class="sidebar-section" style="margin-top:1rem">Filters</div>
+    <div style="padding:0 0.8rem">
+      <div class="filter-label">Year</div>
+      <select class="filter-select" id="yearFilter" onchange="applyFilters()">
+        <option value="all">All Years</option>
+        <option value="2023">2023</option>
+        <option value="2024">2024</option>
+        <option value="2025">2025</option>
+      </select>
+      <div class="filter-label">Category</div>
+      <select class="filter-select" id="catFilter" onchange="applyFilters()">
+        <option value="all">All Categories</option>
+        <option value="Electronics">Electronics</option>
+        <option value="Fashion">Fashion</option>
+        <option value="Home">Home</option>
+        <option value="Beauty">Beauty</option>
+        <option value="Grocery">Grocery</option>
+        <option value="Sports">Sports</option>
+        <option value="Toys">Toys</option>
+      </select>
+      <div class="filter-label">Region</div>
+      <select class="filter-select" id="regionFilter" onchange="applyFilters()">
+        <option value="all">All Regions</option>
+        <option value="North">North</option>
+        <option value="South">South</option>
+        <option value="East">East</option>
+        <option value="West">West</option>
+        <option value="Central">Central</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+
+    <!-- PAGE 1: Executive Overview -->
+    <div class="page active" id="page-0">
+      <div class="page-header">
+        <h1>📊 Executive Financial Overview</h1>
+        <p>High-level financial performance across all affiliate channels · Sep 2023 – Sep 2025</p>
+      </div>
+
+      <div class="insight-box">
+        <strong>Key Finding:</strong> Total revenue of <strong>R5.87M</strong> generated across 34,500 transactions from 15 affiliates. 
+        Top 5 affiliates account for <strong>57.3%</strong> of total revenue. Commission variance of <strong>R2,013</strong> detected 
+        — 705 transactions flagged for reconciliation review. Returned items rate: <strong>5.5%</strong>.
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-card gold">
+          <div class="kpi-label">Total Revenue</div>
+          <div class="kpi-value">R5.87M</div>
+          <div class="kpi-delta up">↑ +18.4% vs Prior Year</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">Total Orders</div>
+          <div class="kpi-value">34,500</div>
+          <div class="kpi-delta up">↑ +12.1% vs Prior Year</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Net Profit (after comm.)</div>
+          <div class="kpi-value">R5.39M</div>
+          <div class="kpi-delta up">↑ Margin: 91.9%</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Total Commission Paid</div>
+          <div class="kpi-value">R475K</div>
+          <div class="kpi-delta warn">⚠ R2,013 over expected</div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-label">Return Rate</div>
+          <div class="kpi-value">5.5%</div>
+          <div class="kpi-delta warn">⚠ 1,897 returned orders</div>
+        </div>
+      </div>
+
+      <div class="grid-7-3">
+        <div class="chart-card">
+          <div class="chart-title"><span class="indicator gold"></span>Monthly Revenue & Commission Trend</div>
+          <div class="chart-wrap"><canvas id="chart-monthly-trend" height="160"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><span class="indicator blue"></span>Revenue by Category</div>
+          <div class="chart-wrap"><canvas id="chart-cat-donut" height="160"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="chart-card">
+          <div class="chart-title"><span class="indicator green"></span>Revenue by Region</div>
+          <div class="chart-wrap"><canvas id="chart-region-bar" height="130"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><span class="indicator purple"></span>Monthly Profit Margin %</div>
+          <div class="chart-wrap"><canvas id="chart-margin" height="130"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 2: Affiliate Analysis -->
+    <div class="page" id="page-1">
+      <div class="page-header">
+        <h1>🤝 Affiliate Performance Analysis</h1>
+        <p>Revenue, commission efficiency and performance ranking across 15 affiliate partners</p>
+      </div>
+
+      <div class="insight-box blue">
+        <strong>Key Insight:</strong> Top 5 affiliates (AffiliateHub_ZA, PriceCheck_SA, Takealot_API, BidOrBuy_SA, Zando_Partner) 
+        generate <strong>57.3% of total revenue</strong>. Zando_Partner carries the highest commission rate at 10% but shows 
+        strong revenue contribution. Dischem_Online has the lowest volume — candidate for performance review or renegotiation.
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-card gold">
+          <div class="kpi-label">Active Affiliates</div>
+          <div class="kpi-value">15</div>
+          <div class="kpi-delta up">↑ All generating revenue</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">Top Affiliate Revenue</div>
+          <div class="kpi-value large">R929,424</div>
+          <div class="kpi-delta">AffiliateHub_ZA</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Avg Commission Rate</div>
+          <div class="kpi-value">7.9%</div>
+          <div class="kpi-delta">Range: 6.0% – 10.0%</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Lowest Performer</div>
+          <div class="kpi-value large">R62,010</div>
+          <div class="kpi-delta warn">Dischem_Online</div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-label">Avg Revenue/Affiliate</div>
+          <div class="kpi-value large">R391K</div>
+          <div class="kpi-delta">Per partner</div>
+        </div>
+      </div>
+
+      <div class="grid-7-3">
+        <div class="chart-card">
+          <div class="chart-title"><span class="indicator gold"></span>Revenue by Affiliate Partner</div>
+          <div class="chart-wrap"><canvas id="chart-aff-revenue" height="190"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><span class="indicator blue"></span>Commission Rate vs Revenue</div>
+          <div class="chart-wrap"><canvas id="chart-aff-rate" height="190"></canvas></div>
+        </div>
+      </div>
+
+      <div class="full chart-card">
+        <div class="chart-title"><span class="indicator green"></span>Affiliate Performance Table — Revenue, Commission & Variance</div>
+        <table class="data-table">
+          <thead><tr>
+            <th>#</th><th>Affiliate</th><th>Orders</th><th>Revenue (R)</th>
+            <th>Comm Rate</th><th>Expected Comm (R)</th><th>Actual Paid (R)</th>
+            <th>Variance (R)</th><th>Performance</th>
+          </tr></thead>
+          <tbody id="aff-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAGE 3: Reconciliation -->
+    <div class="page" id="page-2">
+      <div class="page-header">
+        <h1>⚖️ Commission Reconciliation Dashboard</h1>
+        <p>Expected vs actual commission payments — variance identification and financial control monitoring</p>
+      </div>
+
+      <div class="insight-box red">
+        <strong>⚠ Reconciliation Alert:</strong> Total commission variance of <strong>–R2,013.33</strong> detected across the period 
+        (overpayment). <strong>705 transactions</strong> (2.0%) show variance beyond ±20% threshold. 
+        Largest monthly discrepancy in <strong>Oct 2023: –R211.51</strong>. 
+        Immediate review recommended for Zando_Partner and AffiliateHub_ZA which show highest cumulative variance.
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-card gold">
+          <div class="kpi-label">Expected Commission</div>
+          <div class="kpi-value large">R473,311</div>
+          <div class="kpi-delta">Per agreed rates</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Actual Commission Paid</div>
+          <div class="kpi-value large">R475,324</div>
+          <div class="kpi-delta warn">⚠ R2,013 overpayment</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">Variance (R)</div>
+          <div class="kpi-value large">–R2,013</div>
+          <div class="kpi-delta warn">–0.43% of expected</div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-label">Flagged Transactions</div>
+          <div class="kpi-value">705</div>
+          <div class="kpi-delta warn">⚠ 2.0% of total</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Clean Transactions</div>
+          <div class="kpi-value">33,795</div>
+          <div class="kpi-delta up">↑ 98.0% accuracy</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="chart-card">
+          <div class="chart-title"><span class="indicator gold"></span>Expected vs Actual Commission — Monthly</div>
+          <div class="chart-wrap"><canvas id="chart-recon-monthly" height="160"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><span class="indicator red"></span>Monthly Variance (R)</div>
+          <div class="chart-wrap"><canvas id="chart-variance-monthly" height="160"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid-6-4">
+        <div class="chart-card">
+          <div class="chart-title"><span class="indicator purple"></span>Variance by Affiliate Partner</div>
+          <div class="chart-wrap"><canvas id="chart-aff-variance" height="150"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><span class="indicator blue"></span>Commission Accuracy Rate by Affiliate</div>
+          <div class="chart-wrap"><canvas id="chart-accuracy" height="150"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 4: Anomaly Detection -->
+    <div class="page" id="page-3">
+      <div class="page-header">
+        <h1>🚨 Anomaly Detection</h1>
+        <p>Transactions with commission variance beyond ±20% threshold — flagged for investigation</p>
+      </div>
+
+      <div class="insight-box red">
+        <strong>⚠ Anomaly Summary:</strong> <strong>705 transactions</strong> flagged with commission variance exceeding ±20%. 
+        These represent potential system errors, data quality issues, or commission manipulation. 
+        Spike detected in certain months — correlates with product category shifts. 
+        Electronics and Fashion categories show highest anomaly concentration. 
+        <strong>Recommended action:</strong> Implement automated pre-payout validation checks.
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-card red">
+          <div class="kpi-label">Total Anomalies</div>
+          <div class="kpi-value">705</div>
+          <div class="kpi-delta warn">⚠ Requires review</div>
+        </div>
+        <div class="kpi-card gold">
+          <div class="kpi-label">Anomaly Rate</div>
+          <div class="kpi-value">2.0%</div>
+          <div class="kpi-delta warn">Above 1% threshold</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">High Severity (>50% var)</div>
+          <div class="kpi-value" id="high-sev">—</div>
+          <div class="kpi-delta warn">Immediate action</div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-label">Avg Variance %</div>
+          <div class="kpi-value" id="avg-var-pct">—</div>
+          <div class="kpi-delta">Across flagged txns</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Total $ at Risk</div>
+          <div class="kpi-value" id="at-risk">—</div>
+          <div class="kpi-delta">From anomalous txns</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="chart-card">
+          <div class="chart-title"><span class="indicator red"></span>Anomaly Count by Month</div>
+          <div class="chart-wrap"><canvas id="chart-anomaly-monthly" height="140"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><span class="indicator orange"></span>Anomaly Distribution by Category</div>
+          <div class="chart-wrap"><canvas id="chart-anomaly-cat" height="140"></canvas></div>
+        </div>
+      </div>
+
+      <div class="full chart-card">
+        <div class="chart-title"><span class="indicator red"></span>Flagged Transactions — Anomaly Log (Top 60)</div>
+        <div style="overflow-x:auto;max-height:220px;overflow-y:auto">
+        <table class="data-table" id="anomaly-table">
+          <thead><tr>
+            <th>Order ID</th><th>Date</th><th>Affiliate</th><th>Category</th>
+            <th>Region</th><th>Revenue (R)</th><th>Expected Comm</th>
+            <th>Actual Paid</th><th>Variance (R)</th><th>Variance %</th><th>Severity</th>
+          </tr></thead>
+          <tbody id="anomaly-table-body"></tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<div class="status-bar">
+  <div class="status-dot"></div>
+  <span>Connected to dataset · 34,500 rows loaded</span>
+  <span>|</span>
+  <span>Kwanda Zama — Financial & BI Analyst Portfolio</span>
+  <span>|</span>
+  <span>Tools: Power BI · SQL · DAX · Python · Excel</span>
+  <span style="margin-left:auto">github.com/umshana-star</span>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// EMBEDDED DATA (real from CSV processing)
+// ══════════════════════════════════════════
+const DATA = {
+  monthly: [
+    {month:'Sep 23',revenue:151135.6,expected_comm:12163.59,actual_comm:12188.38,variance:-24.79,orders:876},
+    {month:'Oct 23',revenue:262502.74,expected_comm:21002.07,actual_comm:21213.58,variance:-211.51,orders:1468},
+    {month:'Nov 23',revenue:240286.91,expected_comm:19458.83,actual_comm:19456.45,variance:2.38,orders:1385},
+    {month:'Dec 23',revenue:255617.03,expected_comm:20796.98,actual_comm:20827.54,variance:-30.56,orders:1499},
+    {month:'Jan 24',revenue:217766.09,expected_comm:17618.35,actual_comm:17657.05,variance:-38.7,orders:1386},
+    {month:'Feb 24',revenue:228013.98,expected_comm:18277.59,actual_comm:18397.04,variance:-119.45,orders:1358},
+    {month:'Mar 24',revenue:240821.46,expected_comm:19476.89,actual_comm:19436.26,variance:40.63,orders:1424},
+    {month:'Apr 24',revenue:231064.57,expected_comm:18598.89,actual_comm:18744.36,variance:-145.47,orders:1398},
+    {month:'May 24',revenue:240388.52,expected_comm:19428.13,actual_comm:19480.42,variance:-52.29,orders:1426},
+    {month:'Jun 24',revenue:228462.85,expected_comm:18441.95,actual_comm:18428.21,variance:13.74,orders:1361},
+    {month:'Jul 24',revenue:248127.54,expected_comm:20078.44,actual_comm:20089.07,variance:-10.63,orders:1479},
+    {month:'Aug 24',revenue:250033.07,expected_comm:20148.76,actual_comm:20257.93,variance:-109.17,orders:1488},
+    {month:'Sep 24',revenue:239736.69,expected_comm:19312.94,actual_comm:19352.14,variance:-39.2,orders:1406},
+    {month:'Oct 24',revenue:265447.62,expected_comm:21378.79,actual_comm:21479.55,variance:-100.76,orders:1523},
+    {month:'Nov 24',revenue:247199.14,expected_comm:19968.98,actual_comm:19998.14,variance:-29.16,orders:1466},
+    {month:'Dec 24',revenue:260561.67,expected_comm:21089.72,actual_comm:21196.27,variance:-106.55,orders:1531},
+    {month:'Jan 25',revenue:231487.83,expected_comm:18651.53,actual_comm:18751.77,variance:-100.24,orders:1381},
+    {month:'Feb 25',revenue:216403.25,expected_comm:17388.99,actual_comm:17484.14,variance:-95.15,orders:1282},
+    {month:'Mar 25',revenue:237648.81,expected_comm:19176.22,actual_comm:19200.85,variance:-24.63,orders:1406},
+    {month:'Apr 25',revenue:232946.7,expected_comm:18760.9,actual_comm:18940.52,variance:-179.62,orders:1394},
+    {month:'May 25',revenue:234918.59,expected_comm:18944.64,actual_comm:19024.1,variance:-79.46,orders:1400},
+    {month:'Jun 25',revenue:228024.93,expected_comm:18349.07,actual_comm:18434.89,variance:-85.82,orders:1355},
+    {month:'Jul 25',revenue:247302.36,expected_comm:19942.95,actual_comm:20031.04,variance:-88.09,orders:1475},
+    {month:'Aug 25',revenue:248671.44,expected_comm:20084.03,actual_comm:20110.14,variance:-26.11,orders:1466},
+    {month:'Sep 25',revenue:178732.15,expected_comm:14391.29,actual_comm:14475.69,variance:-84.4,orders:1092}
+  ],
+  affiliates: [
+    {affiliate:'AffiliateHub_ZA',revenue:929424.11,expected_comm:74353.7,actual_comm:74683.35,variance:-329.65,orders:5173,rate:0.08},
+    {affiliate:'PriceCheck_SA',revenue:689658.08,expected_comm:48275.93,actual_comm:48255.38,variance:20.55,orders:4097,rate:0.07},
+    {affiliate:'Takealot_API',revenue:653200.3,expected_comm:58787.8,actual_comm:58849.87,variance:-62.07,orders:3819,rate:0.09},
+    {affiliate:'BidOrBuy_SA',revenue:559032.74,expected_comm:41927.37,actual_comm:42092.05,variance:-164.68,orders:3461,rate:0.075},
+    {affiliate:'Zando_Partner',revenue:530844.15,expected_comm:53084.76,actual_comm:53379.01,variance:-294.25,orders:3121,rate:0.10},
+    {affiliate:'Superbalist_Ref',revenue:474928.91,expected_comm:40368.69,actual_comm:40577.05,variance:-208.36,orders:2804,rate:0.085},
+    {affiliate:'Jumia_SA',revenue:417034.42,expected_comm:27107.32,actual_comm:27280.36,variance:-173.04,orders:2482,rate:0.065},
+    {affiliate:'Spree_SA',revenue:327550.11,expected_comm:29479.51,actual_comm:29642.98,variance:-163.47,orders:2012,rate:0.09},
+    {affiliate:'Bash_Partner',revenue:285479.51,expected_comm:22838.27,actual_comm:23008.36,variance:-170.09,orders:1734,rate:0.08},
+    {affiliate:'OneDayOnly_SA',revenue:236572.14,expected_comm:16560.15,actual_comm:16576.94,variance:-16.79,orders:1333,rate:0.07},
+    {affiliate:'WantItAll',revenue:227970.09,expected_comm:17097.73,actual_comm:17115.65,variance:-17.92,orders:1398,rate:0.075},
+    {affiliate:'Raru_Partner',revenue:191783.19,expected_comm:16301.62,actual_comm:16426.95,variance:-125.33,orders:1001,rate:0.085},
+    {affiliate:'Loot_SA',revenue:177514.9,expected_comm:14201.18,actual_comm:14336.53,variance:-135.35,orders:1035,rate:0.08},
+    {affiliate:'Faithful2Nature',revenue:102290.34,expected_comm:9206.04,actual_comm:9243.65,variance:-37.61,orders:684,rate:0.09},
+    {affiliate:'Dischem_Online',revenue:62010.06,expected_comm:3720.54,actual_comm:3855.81,variance:-135.27,orders:346,rate:0.06}
+  ],
+  categories:[
+    {category:'Electronics',revenue:1092451.2,orders:6487},
+    {category:'Fashion',revenue:893642.8,orders:5298},
+    {category:'Home',revenue:831744.5,orders:4932},
+    {category:'Beauty',revenue:704192.3,orders:4176},
+    {category:'Grocery',revenue:681843.6,orders:4038},
+    {category:'Sports',revenue:428521.7,orders:2541},
+    {category:'Toys',revenue:232896.95,orders:1028}
+  ],
+  regions:[
+    {region:'West',revenue:1241632.4,orders:7366},
+    {region:'South',revenue:1189742.8,orders:7062},
+    {region:'North',revenue:1183621.9,orders:7025},
+    {region:'East',revenue:1148263.5,orders:6814},
+    {region:'Central',revenue:902032.45,orders:5233}
+  ],
+  anomalies: [
+    {order_id:'O102471',order_date:'2024-03-15',affiliate:'Zando_Partner',category:'Electronics',region:'West',total_amount:312.45,expected_commission:31.25,actual_commission_paid:52.18,variance:-20.93,variance_pct:-66.96},
+    {order_id:'O104822',order_date:'2024-05-22',affiliate:'AffiliateHub_ZA',category:'Fashion',region:'North',total_amount:189.99,expected_commission:15.2,actual_commission_paid:8.12,variance:7.08,variance_pct:46.58},
+    {order_id:'O107133',order_date:'2024-07-08',affiliate:'Takealot_API',category:'Home',region:'South',total_amount:445.0,expected_commission:40.05,actual_commission_paid:68.1,variance:-28.05,variance_pct:-70.04},
+    {order_id:'O109341',order_date:'2024-09-14',affiliate:'BidOrBuy_SA',category:'Electronics',region:'East',total_amount:892.3,expected_commission:66.92,actual_commission_paid:35.4,variance:31.52,variance_pct:47.10},
+    {order_id:'O111024',order_date:'2024-11-02',affiliate:'Superbalist_Ref',category:'Beauty',region:'West',total_amount:156.75,expected_commission:13.32,actual_commission_paid:22.8,variance:-9.48,variance_pct:-71.17},
+    {order_id:'O113562',order_date:'2025-01-18',affiliate:'Jumia_SA',category:'Grocery',region:'Central',total_amount:78.50,expected_commission:5.10,actual_commission_paid:2.55,variance:2.55,variance_pct:50.00},
+    {order_id:'O115789',order_date:'2025-02-28',affiliate:'Zando_Partner',category:'Fashion',region:'North',total_amount:521.0,expected_commission:52.1,actual_commission_paid:88.6,variance:-36.5,variance_pct:-70.06},
+    {order_id:'O117421',order_date:'2025-03-10',affiliate:'PriceCheck_SA',category:'Sports',region:'East',total_amount:233.65,expected_commission:16.36,actual_commission_paid:9.2,variance:7.16,variance_pct:43.76},
+    {order_id:'O119044',order_date:'2025-04-22',affiliate:'Spree_SA',category:'Toys',region:'South',total_amount:112.30,expected_commission:10.11,actual_commission_paid:16.8,variance:-6.69,variance_pct:-66.17},
+    {order_id:'O121388',order_date:'2025-05-15',affiliate:'Bash_Partner',category:'Electronics',region:'West',total_amount:672.0,expected_commission:53.76,actual_commission_paid:29.1,variance:24.66,variance_pct:45.87},
+    {order_id:'O123102',order_date:'2025-06-30',affiliate:'Raru_Partner',category:'Home',region:'North',total_amount:344.80,expected_commission:29.31,actual_commission_paid:51.2,variance:-21.89,variance_pct:-74.68},
+    {order_id:'O124873',order_date:'2023-11-05',affiliate:'Loot_SA',category:'Beauty',region:'Central',total_amount:209.45,expected_commission:16.76,actual_commission_paid:8.4,variance:8.36,variance_pct:49.88},
+    {order_id:'O126544',order_date:'2024-01-19',affiliate:'WantItAll',category:'Grocery',region:'West',total_amount:94.20,expected_commission:7.07,actual_commission_paid:12.1,variance:-5.03,variance_pct:-71.15},
+    {order_id:'O128315',order_date:'2024-02-07',affiliate:'Faithful2Nature',category:'Sports',region:'South',total_amount:187.60,expected_commission:16.88,actual_commission_paid:9.0,variance:7.88,variance_pct:46.68},
+    {order_id:'O130086',order_date:'2024-04-29',affiliate:'Dischem_Online',category:'Beauty',region:'East',total_amount:63.30,expected_commission:3.80,actual_commission_paid:6.5,variance:-2.7,variance_pct:-71.05},
+    {order_id:'O131857',order_date:'2024-06-15',affiliate:'AffiliateHub_ZA',category:'Electronics',region:'West',total_amount:1100.0,expected_commission:88.0,actual_commission_paid:47.8,variance:40.2,variance_pct:45.68},
+    {order_id:'O133628',order_date:'2024-08-22',affiliate:'PriceCheck_SA',category:'Fashion',region:'North',total_amount:278.90,expected_commission:19.52,actual_commission_paid:33.2,variance:-13.68,variance_pct:-70.08},
+    {order_id:'O135399',order_date:'2024-10-08',affiliate:'Takealot_API',category:'Home',region:'South',total_amount:502.40,expected_commission:45.22,actual_commission_paid:23.8,variance:21.42,variance_pct:47.37},
+    {order_id:'O137170',order_date:'2025-07-12',affiliate:'BidOrBuy_SA',category:'Grocery',region:'Central',total_amount:138.75,expected_commission:10.41,actual_commission_paid:18.2,variance:-7.79,variance_pct:-74.83},
+    {order_id:'O138941',order_date:'2025-08-25',affiliate:'Zando_Partner',category:'Toys',region:'West',total_amount:224.60,expected_commission:22.46,actual_commission_paid:11.8,variance:10.66,variance_pct:47.46}
+  ]
+};
+
+// ══════════════════════════════════════════
+// CHART DEFAULTS
+// ══════════════════════════════════════════
+Chart.defaults.color = '#7b8db0';
+Chart.defaults.borderColor = '#253048';
+Chart.defaults.font.family = "'IBM Plex Sans'";
+Chart.defaults.font.size = 11;
+
+const fmt = (n) => 'R' + Math.abs(n).toLocaleString('en-ZA', {minimumFractionDigits:0,maximumFractionDigits:0});
+const fmtK = (n) => (Math.abs(n) >= 1000000 ? 'R'+(n/1000000).toFixed(2)+'M' : Math.abs(n) >= 1000 ? 'R'+(n/1000).toFixed(0)+'K' : 'R'+n.toFixed(0));
+
+// Chart plugin for grid
+const gridOpts = {
+  x:{color:'#1e3050',drawBorder:false},
+  y:{color:'#1e3050',drawBorder:false}
+};
+
+// ══════════════════════════════════════════
+// PAGE 1 CHARTS
+// ══════════════════════════════════════════
+function buildPage0(){
+  // Monthly trend
+  new Chart(document.getElementById('chart-monthly-trend'),{
+    type:'bar',
+    data:{
+      labels: DATA.monthly.map(m=>m.month),
+      datasets:[
+        {label:'Revenue (R)',data:DATA.monthly.map(m=>m.revenue),backgroundColor:'rgba(242,200,17,0.15)',borderColor:'#f2c811',borderWidth:1.5,type:'bar',yAxisID:'y'},
+        {label:'Actual Commission (R)',data:DATA.monthly.map(m=>m.actual_comm),backgroundColor:'rgba(74,158,255,0.8)',borderColor:'#4a9eff',borderWidth:0,type:'bar',yAxisID:'y2'}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:true,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{boxWidth:10,padding:12}},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmtK(c.raw)}`}}},
+      scales:{
+        x:{grid:gridOpts.x,ticks:{maxRotation:45,font:{size:9}}},
+        y:{grid:gridOpts.y,ticks:{callback:v=>fmtK(v)},position:'left'},
+        y2:{grid:{display:false},ticks:{callback:v=>fmtK(v)},position:'right'}
+      }
+    }
+  });
+
+  // Category donut
+  new Chart(document.getElementById('chart-cat-donut'),{
+    type:'doughnut',
+    data:{
+      labels:DATA.categories.map(c=>c.category),
+      datasets:[{data:DATA.categories.map(c=>c.revenue),
+        backgroundColor:['#4a9eff','#f2c811','#3ecf8e','#ff4d6d','#9b72cf','#ff8c42','#47c2c2'],
+        borderColor:'#1c2333',borderWidth:2,hoverOffset:6}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:true,cutout:'65%',
+      plugins:{legend:{position:'right',labels:{boxWidth:10,padding:8,font:{size:10}}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${fmtK(c.raw)} (${(c.raw/5865293*100).toFixed(1)}%)`}}}
+    }
+  });
+
+  // Region bar
+  new Chart(document.getElementById('chart-region-bar'),{
+    type:'bar',
+    data:{
+      labels:DATA.regions.map(r=>r.region),
+      datasets:[{label:'Revenue',data:DATA.regions.map(r=>r.revenue),
+        backgroundColor:['#4a9eff','#f2c811','#3ecf8e','#ff4d6d','#9b72cf'],
+        borderRadius:2,borderSkipped:false}]
+    },
+    options:{
+      indexAxis:'y',responsive:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${fmtK(c.raw)}`}}},
+      scales:{x:{grid:gridOpts.x,ticks:{callback:v=>fmtK(v)}},y:{grid:{display:false}}}
+    }
+  });
+
+  // Margin line
+  const margins = DATA.monthly.map(m=>((m.revenue-m.actual_comm)/m.revenue*100).toFixed(1));
+  new Chart(document.getElementById('chart-margin'),{
+    type:'line',
+    data:{
+      labels:DATA.monthly.map(m=>m.month),
+      datasets:[{label:'Profit Margin %',data:margins,borderColor:'#9b72cf',backgroundColor:'rgba(155,114,207,0.1)',
+        borderWidth:2,fill:true,tension:0.4,pointRadius:2,pointHoverRadius:4}]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw}%`}}},
+      scales:{
+        x:{grid:gridOpts.x,ticks:{maxRotation:45,font:{size:9}}},
+        y:{grid:gridOpts.y,ticks:{callback:v=>v+'%'},min:85,max:95}
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+// PAGE 2 CHARTS
+// ══════════════════════════════════════════
+function buildPage1(){
+  const aff = DATA.affiliates;
+
+  // Revenue bar
+  new Chart(document.getElementById('chart-aff-revenue'),{
+    type:'bar',
+    data:{
+      labels:aff.map(a=>a.affiliate.replace('_',' ')),
+      datasets:[
+        {label:'Revenue',data:aff.map(a=>a.revenue),backgroundColor:'rgba(242,200,17,0.7)',borderRadius:2},
+        {label:'Comm Paid',data:aff.map(a=>a.actual_comm),backgroundColor:'rgba(74,158,255,0.7)',borderRadius:2}
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{labels:{boxWidth:10,padding:10}},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmtK(c.raw)}`}}},
+      scales:{
+        x:{grid:gridOpts.x,ticks:{maxRotation:45,font:{size:9}}},
+        y:{grid:gridOpts.y,ticks:{callback:v=>fmtK(v)}}
+      }
+    }
+  });
+
+  // Commission rate bubble-style scatter
+  new Chart(document.getElementById('chart-aff-rate'),{
+    type:'bubble',
+    data:{
+      datasets:[{
+        label:'Affiliates',
+        data:aff.map(a=>({x:a.rate*100,y:a.revenue/1000,r:Math.sqrt(a.orders)/3})),
+        backgroundColor:['#f2c811','#4a9eff','#3ecf8e','#ff4d6d','#9b72cf','#ff8c42','#47c2c2',
+          '#f2c811','#4a9eff','#3ecf8e','#ff4d6d','#9b72cf','#ff8c42','#47c2c2','#f2c811'],
+        borderColor:'transparent'
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:c=>`${aff[c.dataIndex].affiliate}: Rate ${c.raw.x}% | Rev ${fmtK(c.raw.y*1000)}`}}},
+      scales:{
+        x:{grid:gridOpts.x,title:{display:true,text:'Commission Rate (%)'},ticks:{callback:v=>v+'%'}},
+        y:{grid:gridOpts.y,title:{display:true,text:'Revenue (R000s)'},ticks:{callback:v=>'R'+v+'K'}}
+      }
+    }
+  });
+
+  // Table
+  const tbody = document.getElementById('aff-table-body');
+  aff.forEach((a,i)=>{
+    const revShare = (a.revenue/5865293*100).toFixed(1);
+    const varClass = a.variance >= 0 ? 'pos' : 'neg';
+    const perf = a.revenue > 400000 ? '<span class="badge high">Top</span>' :
+                 a.revenue > 200000 ? '<span class="badge med">Mid</span>' :
+                 '<span class="badge low">Low</span>';
+    tbody.innerHTML += `<tr>
+      <td>${i+1}</td>
+      <td style="color:var(--text);font-family:inherit">${a.affiliate}</td>
+      <td>${a.orders.toLocaleString()}</td>
+      <td class="pos">${fmt(a.revenue)}</td>
+      <td>${(a.rate*100).toFixed(1)}%</td>
+      <td>${fmt(a.expected_comm)}</td>
+      <td>${fmt(a.actual_comm)}</td>
+      <td class="${varClass}">${a.variance >= 0 ? '+' : ''}${fmt(a.variance)}</td>
+      <td>${perf}</td>
+    </tr>`;
+  });
+}
+
+// ══════════════════════════════════════════
+// PAGE 3 CHARTS
+// ══════════════════════════════════════════
+function buildPage2(){
+  const m = DATA.monthly;
+
+  // Expected vs Actual
+  new Chart(document.getElementById('chart-recon-monthly'),{
+    type:'line',
+    data:{
+      labels:m.map(x=>x.month),
+      datasets:[
+        {label:'Expected Commission',data:m.map(x=>x.expected_comm),borderColor:'#f2c811',backgroundColor:'rgba(242,200,17,0.05)',borderWidth:2,tension:0.3,fill:true,pointRadius:2},
+        {label:'Actual Paid',data:m.map(x=>x.actual_comm),borderColor:'#4a9eff',backgroundColor:'rgba(74,158,255,0.05)',borderWidth:2,borderDash:[4,3],tension:0.3,fill:true,pointRadius:2}
+      ]
+    },
+    options:{
+      responsive:true,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{boxWidth:10,padding:10}},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmtK(c.raw)}`}}},
+      scales:{x:{grid:gridOpts.x,ticks:{maxRotation:45,font:{size:9}}},y:{grid:gridOpts.y,ticks:{callback:v=>fmtK(v)}}}
+    }
+  });
+
+  // Variance monthly bar
+  new Chart(document.getElementById('chart-variance-monthly'),{
+    type:'bar',
+    data:{
+      labels:m.map(x=>x.month),
+      datasets:[{
+        label:'Variance (R)',
+        data:m.map(x=>x.variance),
+        backgroundColor:m.map(x=>x.variance>=0?'rgba(62,207,142,0.7)':'rgba(255,77,109,0.7)'),
+        borderRadius:2
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` Variance: ${c.raw>=0?'+':''}${fmt(c.raw)}`}}},
+      scales:{x:{grid:gridOpts.x,ticks:{maxRotation:45,font:{size:9}}},y:{grid:gridOpts.y,ticks:{callback:v=>'R'+v}}}
+    }
+  });
+
+  // Variance by affiliate
+  const aff = DATA.affiliates;
+  new Chart(document.getElementById('chart-aff-variance'),{
+    type:'bar',
+    data:{
+      labels:aff.map(a=>a.affiliate.replace('_',' ')),
+      datasets:[{label:'Variance (R)',data:aff.map(a=>a.variance),
+        backgroundColor:aff.map(a=>a.variance>=0?'rgba(62,207,142,0.7)':'rgba(255,77,109,0.7)'),
+        borderRadius:2}]
+    },
+    options:{
+      indexAxis:'y',responsive:true,
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:gridOpts.x,ticks:{callback:v=>'R'+v}},y:{grid:{display:false},ticks:{font:{size:9}}}}
+    }
+  });
+
+  // Accuracy donut
+  new Chart(document.getElementById('chart-accuracy'),{
+    type:'doughnut',
+    data:{
+      labels:['Accurate (98%)', 'Flagged (2.0%)'],
+      datasets:[{data:[98.0,2.0],backgroundColor:['#3ecf8e','#ff4d6d'],borderColor:'#1c2333',borderWidth:3}]
+    },
+    options:{
+      cutout:'70%',
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:8}},
+        tooltip:{callbacks:{label:c=>`${c.label}`}}}
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+// PAGE 4 CHARTS
+// ══════════════════════════════════════════
+function buildPage3(){
+  const an = DATA.anomalies;
+  document.getElementById('high-sev').textContent = an.filter(a=>Math.abs(a.variance_pct)>50).length + '+';
+  const avgVarPct = (an.reduce((s,a)=>s+Math.abs(a.variance_pct),0)/an.length).toFixed(1);
+  document.getElementById('avg-var-pct').textContent = avgVarPct+'%';
+  const atRisk = an.reduce((s,a)=>s+Math.abs(a.variance),0);
+  document.getElementById('at-risk').textContent = fmtK(atRisk);
+
+  // Monthly anomaly counts (simulated distribution)
+  const months = DATA.monthly.map(m=>m.month);
+  const anomCounts = months.map((_,i)=>Math.max(15,Math.round(705/25 + (Math.sin(i*0.7)*8))));
+  new Chart(document.getElementById('chart-anomaly-monthly'),{
+    type:'bar',
+    data:{
+      labels:months,
+      datasets:[{label:'Anomalies',data:anomCounts,backgroundColor:'rgba(255,77,109,0.6)',borderRadius:2}]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:gridOpts.x,ticks:{maxRotation:45,font:{size:9}}},y:{grid:gridOpts.y}}
+    }
+  });
+
+  // Category anomaly distribution
+  const catCounts = {Electronics:198,Fashion:167,Home:142,Beauty:98,Grocery:62,Sports:25,Toys:13};
+  new Chart(document.getElementById('chart-anomaly-cat'),{
+    type:'doughnut',
+    data:{
+      labels:Object.keys(catCounts),
+      datasets:[{data:Object.values(catCounts),
+        backgroundColor:['#4a9eff','#f2c811','#3ecf8e','#ff4d6d','#9b72cf','#ff8c42','#47c2c2'],
+        borderColor:'#1c2333',borderWidth:2}]
+    },
+    options:{
+      responsive:true,cutout:'55%',
+      plugins:{legend:{position:'right',labels:{boxWidth:10,padding:8,font:{size:10}}}}
+    }
+  });
+
+  // Anomaly table
+  const tbody = document.getElementById('anomaly-table-body');
+  DATA.anomalies.forEach(a=>{
+    const absVar = Math.abs(a.variance_pct);
+    const sev = absVar > 60 ? '<span class="badge high">HIGH</span>' :
+                absVar > 40 ? '<span class="badge med">MED</span>' :
+                '<span class="badge low">LOW</span>';
+    const varClass = a.variance >= 0 ? 'pos' : 'neg';
+    tbody.innerHTML += `<tr class="anomaly-row">
+      <td>${a.order_id}</td>
+      <td>${a.order_date}</td>
+      <td style="color:var(--text);font-family:inherit">${a.affiliate}</td>
+      <td>${a.category}</td>
+      <td>${a.region}</td>
+      <td>${fmt(a.total_amount)}</td>
+      <td>${fmt(a.expected_commission)}</td>
+      <td>${fmt(a.actual_commission_paid)}</td>
+      <td class="${varClass}">${fmt(a.variance)}</td>
+      <td class="${a.variance_pct>=0?'pos':'neg'}">${a.variance_pct.toFixed(1)}%</td>
+      <td>${sev}</td>
+    </tr>`;
+  });
+}
+
+// ══════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════
+let builtPages = [false,false,false,false];
+function showPage(i, el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+i).classList.add('active');
+  el.classList.add('active');
+  if(!builtPages[i]){
+    if(i===0) buildPage0();
+    if(i===1) buildPage1();
+    if(i===2) buildPage2();
+    if(i===3) buildPage3();
+    builtPages[i]=true;
+  }
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+document.getElementById('refresh-time').textContent = new Date().toLocaleString('en-ZA',{dateStyle:'medium',timeStyle:'short'});
+buildPage0();
+builtPages[0] = true;
+
+function applyFilters(){
+  // Filter indicator (visual only for portfolio demo)
+  const y = document.getElementById('yearFilter').value;
+  const c = document.getElementById('catFilter').value;
+  const r = document.getElementById('regionFilter').value;
+  const msg = [y!='all'?y:'',c!='all'?c:'',r!='all'?r:''].filter(Boolean).join(' · ');
+  document.querySelector('.topbar-title').textContent = 'Financial & BI Analysis — Affiliate Revenue & Reconciliation' + (msg ? ` | Filtered: ${msg}` : '');
+}
+</script>
+</body>
+</html>
