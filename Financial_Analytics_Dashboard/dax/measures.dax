@@ -1,0 +1,72 @@
+-- DAX Measures for Financial Performance Dashboard
+-- Table: Financials (assuming the table name in Power BI is 'Financials')
+
+-- 1. Core KPIs
+Total Revenue = SUM(Financials[Total_Sales])
+
+Total Profit = SUM(Financials[Profit])
+
+Total Loss = 
+CALCULATE(
+    SUM(Financials[Profit]),
+    Financials[Profit] < 0
+)
+
+Profit Margin % = 
+DIVIDE([Total Profit], [Total Revenue], 0)
+
+-- 2. Performance Metrics
+Total Quantity = SUM(Financials[Quantity])
+
+Average Order Value = DIVIDE([Total Revenue], DISTINCTCOUNT(Financials[Order_ID]), 0)
+
+-- 3. Time Intelligence & Growth
+Current Month Sales = 
+CALCULATE(
+    [Total Revenue],
+    DATESMTD(Financials[Order_Date])
+)
+
+Previous Month Sales = 
+CALCULATE(
+    [Total Revenue],
+    PREVIOUSMONTH(Financials[Order_Date])
+)
+
+Sales Growth % = 
+DIVIDE(
+    [Current Month Sales] - [Previous Month Sales],
+    [Previous Month Sales],
+    0
+)
+
+-- 4. Cumulative & Running Totals
+Running Revenue = 
+CALCULATE(
+    [Total Revenue],
+    FILTER(
+        ALLSELECTED(Financials[Order_Date]),
+        Financials[Order_Date] <= MAX(Financials[Order_Date])
+    )
+)
+
+-- 5. Forecasting & Trends
+Moving Average (3 Months) = 
+AVERAGEX(
+    DATESINPERIOD(
+        Financials[Order_Date],
+        LASTDATE(Financials[Order_Date]),
+        -3,
+        MONTH
+    ),
+    [Total Revenue]
+)
+
+-- 6. Operational Efficiency
+Shipping Cost Ratio = DIVIDE(SUM(Financials[Shipping_Cost]), [Total Revenue], 0)
+
+Discount Impact = 
+SUMX(
+    Financials,
+    Financials[Quantity] * Financials[Unit_Price] * (Financials[Discount_Percent]/100)
+)
